@@ -43,7 +43,7 @@ def calculate_student_grade(student_name, students, scores, assignments):
                 total_weighted_score += (s_score / 100) * points
                 total_points += points
     percentage = int(round((total_weighted_score / total_points) * 100)) if total_points > 0 else 0
-    return f"{student_name}'s grade: {percentage}%"
+    return f"{percentage}%"
 def assignment_statistics(assignment_name, assignments, scores):
     assignment_id = next((id for id, (name, _) in assignments.items() if name == assignment_name), None)
     if not assignment_id:
@@ -83,15 +83,15 @@ def main():
     print_menu()
     selection = input().strip()
     if selection == '1':
-        student_name = input("Enter student name: ")
+        student_name = input("What is the student's name: ")
         result = calculate_student_grade(student_name, students, scores, assignments)
         print(result)
     elif selection == '2':
-        assignment_name = input("Enter assignment name: ")
+        assignment_name = input("What is the assignment name: ")
         result = assignment_statistics(assignment_name, assignments, scores)
         print(result)
     elif selection == '3':
-        assignment_name = input("Enter assignment name: ")
+        assignment_name = input("What is the assignment name: ")
         plot_assignment_graph(assignment_name, assignments, scores)
     else:
         print("Invalid selection.")
