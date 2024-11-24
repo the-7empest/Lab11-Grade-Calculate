@@ -1,110 +1,99 @@
 import os
 import matplotlib.pyplot as plt
-def load_students(file_path):
+def read_students(file_path):
     students = {}
     with open(file_path, 'r') as file:
         for line in file:
-            id = int(line[:3])
-            name = line[3:].strip() 
-            students[id] = name
+            student_id = line[:3]
+            student_name = line[3:].strip()
+            students[student_id] = student_name
     return students
-
-def load_assignments(file_path):
+def read_assignments(file_path):
     assignments = {}
     with open(file_path, 'r') as file:
-        lines = file.readlines()
-        for i in range(0, len(lines), 3):
-            name = lines[i].strip()
-            id = int(lines[i + 1].strip())
-            points = int(lines[i + 2].strip())
-            assignments[id] = {"name": name, "points": points}
+        while True:
+            assignment_name = file.readline().strip()
+            if not assignment_name:
+                break
+            assignment_id = file.readline().strip()
+            points = int(file.readline().strip())
+            assignments[assignment_id] = (assignment_name, points)
     return assignments
-def load_valid_submissions(folder_path):
-    submissions = []
-    for file_name in os.listdir(folder_path):
-        file_path = os.path.join(folder_path, file_name)
-        if os.path.isfile(file_path):
-            with open(file_path, 'r') as file:
+def read_scores(folder_path):
+    scores = {}
+    for filename in os.listdir(folder_path):
+        if filename.endswith('.txt'):
+            with open(os.path.join(folder_path, filename), 'r') as file:
                 for line in file:
-                    student_id, assignment_id, grade = line.strip().split(',')
-                    submissions.append({
-                        "student_id": int(student_id),
-                        "assignment_id": int(assignment_id),
-                        "score": float(grade)
-                    })
-    return submissions
-
-def calculate_student_grade(student_name, students, assignments, submissions):
-    student_id = next((id for id, name in students.items() if name == student_name), None)
-    if student_id is None:
+                    student_id, assignment_id, score = line.strip().split('|')
+                    if assignment_id not in scores:
+                        scores[assignment_id] = []
+                    scores[assignment_id].append((student_id, int(score)))
+    return scores
+def calculate_student_grade(student_name, students, scores, assignments):
+    student_id = next((id for id, name in students.items() if name.lower() == student_name.lower()), None)
+    if not student_id:
         return "Student not found"
-    
-    total_score = 0
-    total_possible = 0
-    
-    for submission in submissions:
-        if submission['student_id'] == student_id:
-            assignment = assignments[submission['assignment_id']]
-            total_score += (submission['score'] / 100) * assignment['points']
-            total_possible += assignment['points']
-    
-    grade_percentage = round((total_score / total_possible) * 100)
-    return f"{grade_percentage}%"
-
-def assignment_statistics(assignment_name, assignments, submissions):
-    assignment_id = next((id for id, data in assignments.items() if data['name'] == assignment_name), None)
-    if assignment_id is None:
+    total_weighted_score = 0
+    total_points = 0
+    for assignment_id, score_list in scores.items():
+        for sid, s_score in score_list:
+            if sid == student_id:
+                assignment_name, points = assignments[assignment_id]
+                total_weighted_score += (s_score / 100) * points
+                total_points += points
+    percentage = int(round((total_weighted_score / total_points) * 100)) if total_points > 0 else 0
+    return f"{student_name}'s grade: {percentage}%"
+def assignment_statistics(assignment_name, assignments, scores):
+    assignment_id = next((id for id, (name, _) in assignments.items() if name == assignment_name), None)
+    if not assignment_id:
         return "Assignment not found"
-    
-    scores = [sub['score'] for sub in submissions if sub['assignment_id'] == assignment_id]
-    if not scores:
-        return "No submissions found for this assignment"
-    
-    min_score = min(scores)
-    avg_score = sum(scores) / len(scores)
-    max_score = max(scores)
-    return f"Min: {round(min_score)}%\nAvg: {round(avg_score)}%\nMax: {round(max_score)}%"
-
-def assignment_graph(assignment_name, assignments, submissions):
-    assignment_id = next((id for id, data in assignments.items() if data['name'] == assignment_name), None)
-    if assignment_id is None:
-        return "Assignment not found"
-    
-    scores = [sub['score'] for sub in submissions if sub['assignment_id'] == assignment_id]
-    if not scores:
-        return "No submissions found for this assignment"
-    
-    plt.hist(scores, bins=[0, 25, 50, 75, 100])
-    plt.title(f"Histogram for {assignment_name}")
-    plt.xlabel("Scores")
-    plt.ylabel("Frequency")
+    scores_list = [s_score for sid, s_score in scores.get(assignment_id, [])]
+    if not scores_list:
+        return "No scores found for this assignment."
+    max_score = max(scores_list)
+    min_score = min(scores_list)
+    avg_score = sum(scores_list) / len(scores_list)
+    return f"Min: {min_score}% \nAvg: {int(round(avg_score,1)*10//10)}% \nMax: {max_score}%"
+def plot_assignment_graph(assignment_name, assignments, scores):
+    assignment_id = next((id for id, (name, _) in assignments.items() if name == assignment_name), None)
+    if not assignment_id:
+        print("Assignment not found")
+        return
+    scores_list = []
+    for sid, s_score in scores.get(assignment_id, []):
+        scores_list.append(s_score)
+    if not scores_list:
+        print("No scores found for this assignment.")
+        return
+    plt.hist(scores_list, bins=10, edgecolor='black')
+    plt.title(f'Scores for {assignment_name}')
+    plt.xlabel('Assignment Score out of 100')
+    plt.ylabel('Number of Students')
     plt.show()
-
-def main():
-    data_path = "C:\\Users\\Colin\\Downloads\\data"
-    submissions_path = os.path.join(data_path, 'submissions')
-    students = load_students(os.path.join(data_path, 'students.txt'))
-    assignments = load_assignments(os.path.join(data_path, 'assignments.txt'))
-    submissions = load_valid_submissions(submissions_path)
+def print_menu():
     print("1. Student grade")
     print("2. Assignment statistics")
     print("3. Assignment graph")
-    
-    choice = input("Enter your selection: ")
-    
-    if choice == '1':
-        student_name = input("What is the student's name: ")
-        print(calculate_student_grade(student_name, students, assignments, submissions))
-    elif choice == '2':
-        assignment_name = input("What is the assignment name: ")
-        print(assignment_statistics(assignment_name, assignments, submissions))
-    elif choice == '3':
-        assignment_name = input("What is the assignment name: ")
-        result = assignment_graph(assignment_name, assignments, submissions)
-        if result is not None:
-            print(result)
+    print("\nEnter your selection: ", end='')
+def main():
+    students = read_students("data\\students.txt")
+    assignments = read_assignments("data\\assignments.txt")
+    scores = read_scores("data\\submissions")
+    print_menu()
+    selection = input().strip()
+    if selection == '1':
+        student_name = input("Enter student name: ")
+        result = calculate_student_grade(student_name, students, scores, assignments)
+        print(result)
+    elif selection == '2':
+        assignment_name = input("Enter assignment name: ")
+        result = assignment_statistics(assignment_name, assignments, scores)
+        print(result)
+    elif selection == '3':
+        assignment_name = input("Enter assignment name: ")
+        plot_assignment_graph(assignment_name, assignments, scores)
     else:
-        print("Invalid selection")
-
+        print("Invalid selection.")
 if __name__ == "__main__":
     main()
