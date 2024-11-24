@@ -77,9 +77,9 @@ def print_menu():
     print("3. Assignment graph")
     print("\nEnter your selection: ", end='')
 def main():
-    students = read_students("data\\students.txt")
-    assignments = read_assignments("data\\assignments.txt")
-    scores = read_scores("data\\submissions")
+    students = read_students("data/students.txt")
+    assignments = read_assignments("data/assignments.txt")
+    scores = read_scores("data/submissions")
     print_menu()
     selection = input().strip()
     if selection == '1':
